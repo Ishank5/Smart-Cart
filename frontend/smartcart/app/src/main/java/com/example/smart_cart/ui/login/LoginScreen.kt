@@ -182,39 +182,39 @@ fun LoginScreen(
 }
 
 
-@Composable
-@Preview(showBackground = true)
-fun PreviewLoginScreen() {
-    // Creating a mock ViewModel with mocked login state
-    val mockViewModel = object : LoginViewModel(
-        AuthRepository(firebaseAuth = FirebaseAuth.getInstance())
-    ) {
-        override val loginState: StateFlow<LoginState> = MutableStateFlow(LoginState.Idle)
-
-        override fun login(email: String, password: String) {
-            // Mock implementation for preview
-        }
-    }
-
-    // Mock functions for preview
-    val mockOnLoginSuccess: (String) -> Unit = {}
-    val mockOnRegisterClick: () -> Unit = {}
-    val mockOnForgotPasswordClick: () -> Unit = {}
-
-    // CompositionLocalProvider to handle Context and LifecycleOwner
-    CompositionLocalProvider(
-        LocalContext provides LocalContext.current // Using current LocalContext for preview
-    ) {
-        MaterialTheme {
-            LoginScreen(
-                viewModel = mockViewModel,
-                onLoginSuccess = mockOnLoginSuccess,
-                onRegisterClick = mockOnRegisterClick,
-                onForgotPasswordClick = mockOnForgotPasswordClick
-            )
-        }
-    }
-}
+//@Composable
+//@Preview(showBackground = true)
+//fun PreviewLoginScreen() {
+//    // Creating a mock ViewModel with mocked login state
+//    val mockViewModel = object : LoginViewModel(
+//        AuthRepository(firebaseAuth = FirebaseAuth.getInstance())
+//    ) {
+//        override val loginState: StateFlow<LoginState> = MutableStateFlow(LoginState.Idle)
+//
+//        override fun login(email: String, password: String) {
+//            // Mock implementation for preview
+//        }
+//    }
+//
+//    // Mock functions for preview
+//    val mockOnLoginSuccess: (String) -> Unit = {}
+//    val mockOnRegisterClick: () -> Unit = {}
+//    val mockOnForgotPasswordClick: () -> Unit = {}
+//
+//    // CompositionLocalProvider to handle Context and LifecycleOwner
+//    CompositionLocalProvider(
+//        LocalContext provides LocalContext.current // Using current LocalContext for preview
+//    ) {
+//        MaterialTheme {
+//            LoginScreen(
+//                viewModel = mockViewModel,
+//                onLoginSuccess = mockOnLoginSuccess,
+//                onRegisterClick = mockOnRegisterClick,
+//                onForgotPasswordClick = mockOnForgotPasswordClick
+//            )
+//        }
+//    }
+//}
 
 
 

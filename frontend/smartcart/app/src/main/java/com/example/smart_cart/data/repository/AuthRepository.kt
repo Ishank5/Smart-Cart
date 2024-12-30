@@ -56,6 +56,12 @@ class AuthRepository(
         }
     }
 
+    fun getCurrentUserId(): String? {
+        val firebaseAuth = FirebaseAuth.getInstance()
+        val currentUser = firebaseAuth.currentUser
+        return currentUser?.uid
+    }
+
     // Logout
     fun logout() {
         firebaseAuth.signOut()

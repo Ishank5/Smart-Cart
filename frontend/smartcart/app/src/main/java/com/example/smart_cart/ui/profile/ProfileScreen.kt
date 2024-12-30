@@ -1,5 +1,6 @@
 package com.example.smart_cart.ui.profile
 
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -59,12 +60,18 @@ import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.TextButton
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.lifecycle.viewmodel.compose.viewModel
-
+import com.example.smart_cart.data.ViewModels.GetUserState
+import com.example.smart_cart.data.ViewModels.UserViewModel
+import com.example.smart_cart.data.model.SmartBasket
 
 
 @Composable
-fun MainScreen(onLogoutClick: () -> Unit) {
+fun MainScreen(onLogoutClick: () -> Unit,userViewModel: UserViewModel) {
+
+
+
     Scaffold(
         topBar = {
             Column {
@@ -100,7 +107,7 @@ fun MainScreen(onLogoutClick: () -> Unit) {
                 SearchBar(modifier = Modifier.padding(top = 32.dp, start = 12.dp, end = 12.dp,bottom=12.dp))
 
                 UpdatesSection()
-                CartConnectionStatus()
+                CartConnectionStatus(userViewModel)
                 CategoriesSection(modifier = Modifier.padding(top=12.dp,bottom = 12.dp))
                 Divider(
                     color = Color(0xdddddddd),
@@ -218,20 +225,44 @@ fun UpdatesSection() {
 
 
 @Composable
-fun CartConnectionStatus() {
-    // Mutable state variable to track cart connection
-    var isCartConnected by remember { mutableStateOf(true) }
+fun CartConnectionStatus(userViewModel: UserViewModel) {
+    // Mutable state variables to track cart connection and user details
+    val userState by userViewModel.getUserState.observeAsState()
+    var smartBasket by remember { mutableStateOf<SmartBasket?>(null) }
+    var email by remember { mutableStateOf("") }
+
+    userState?.let { state ->
+        when (state) {
+            is GetUserState.Success -> {
+                val profileData = state.response.data
+                profileData?.let {
+                    smartBasket = it.smartBasket
+                    email = it.email
+                }
+            }
+            is GetUserState.Error -> {
+                // Handle error state
+            }
+            else -> { /* Handle other states if needed */ }
+        }
+    }
+
+    Log.d("CartConnectionStatus", "Email: $email")
+    Log.d("CartConnectionStatus", "Smart Basket: $smartBasket")
+
+    val isCartConnected = smartBasket != null
 
     // Box container to align content at the center
     Box(
         modifier = Modifier
-            .height(80.dp).fillMaxWidth(),
+            .height(80.dp)
+            .fillMaxWidth(),
         contentAlignment = Alignment.Center
     ) {
         // Button styling based on the connection state
         Surface(
             modifier = Modifier
-                .padding(start=16.dp, end = 16.dp)
+                .padding(start = 16.dp, end = 16.dp)
                 .width(340.dp)
                 .height(80.dp),
             shape = RoundedCornerShape(16.dp),

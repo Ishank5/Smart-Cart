@@ -1,12 +1,14 @@
 package com.example.smart_cart.ui.splash
 
 import android.content.Context
+import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.material.CircularProgressIndicator
 import androidx.compose.material.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.*
+import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -16,24 +18,52 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewModelScope
 import androidx.navigation.NavController
 import com.example.smart_cart.R
+import com.example.smart_cart.data.ViewModels.GetUserState
+import com.example.smart_cart.data.ViewModels.UserViewModel
+import com.example.smart_cart.data.repository.AuthRepository
+import com.example.smart_cart.ui.signup.RegisterState
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
-fun SplashScreen(navController: NavController, context: Context) {
+fun SplashScreen(
+    navController: NavController, context: Context, authRepository: AuthRepository,
+    userViewModel: UserViewModel,
+    onTokenEmpty: () -> Unit,
+    onTokenPresent: () -> Unit
+) {
     val sharedPreferences = context.getSharedPreferences("auth", Context.MODE_PRIVATE)
     val token = sharedPreferences.getString("auth_token", null)
 
+    val getUserState by userViewModel.getUserState.observeAsState()
+    var displayError by remember { mutableStateOf(false) }
+
     LaunchedEffect(Unit) {
-        kotlinx.coroutines.delay(2000)
         if (token.isNullOrEmpty()) {
-            navController.navigate("home") {
-                popUpTo("splash") { inclusive = true }
-            }
+            onTokenEmpty()
         } else {
-            navController.navigate("profile") {
-                popUpTo("splash") { inclusive = true }
+            val freshToken = authRepository.getIdToken()
+            Log.d("SplashScreen", "Old Token: $token")
+            Log.d("SplashScreen", "Fresh Token: $freshToken")
+
+            userViewModel.viewModelScope.launch {
+                userViewModel.getUserDetails(authRepository)
             }
+        }
+    }
+
+    LaunchedEffect(getUserState) {
+        when (getUserState) {
+            is GetUserState.Success -> {
+                onTokenPresent()
+            }
+            is GetUserState.Error -> {
+                displayError = true
+            }
+            else -> {}
         }
     }
 
@@ -77,6 +107,31 @@ fun SplashScreen(navController: NavController, context: Context) {
                 color = Color.White.copy(alpha = 0.8f),
                 fontWeight = FontWeight.Medium
             )
+
+            if (displayError) {
+                Text(
+                    text = "An error occurred. Please try again later.",
+                    fontSize = 16.sp,
+                    color = Color.Red,
+                    modifier = Modifier.padding(top = 16.dp)
+                )
+            }
+        }
+        when (getUserState) {
+            is GetUserState.Loading -> androidx.compose.material3.CircularProgressIndicator(
+                Modifier.align(Alignment.Center)
+            )
+            is GetUserState.Error -> {
+                val errorMessage = (getUserState as GetUserState.Error).message
+                androidx.compose.material3.Text(
+                    text = errorMessage,
+                    color = Color.Red,
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .padding(16.dp)
+                )
+            }
+            else -> {}
         }
     }
 }

@@ -1,6 +1,9 @@
 package com.example.smart_cart.data.api
 
 import com.example.smart_cart.data.model.Category
+import com.example.smart_cart.data.model.LoginRequest
+import com.example.smart_cart.data.model.ProfileData
+import com.example.smart_cart.data.model.ProfileResponse
 import com.example.smart_cart.data.model.RegistrationRequest
 import com.example.smart_cart.data.model.UserData
 import kotlinx.coroutines.flow.Flow
@@ -8,9 +11,19 @@ import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
 import retrofit2.http.POST
+import retrofit2.http.Path
 
 // Retrofit API Interface
 interface ApiService {
+
+
+
+
+
+    @GET("user/login")
+    suspend fun loginUser(
+        @Header("Authorization") authorization: String
+    ): ApiResponse<UserData>
 
     // Existing GET request for categories
     @GET("dashboard")
@@ -22,6 +35,13 @@ interface ApiService {
         @Body registrationRequest: RegistrationRequest,
         @Header("Authorization") authorization: String  // The header will have the format: "Bearer <token>"
     ): ApiResponse<UserData>
+
+    // New GET request for user details
+    @GET("user/{id}")
+    suspend fun getUser(
+        @Path("id", encoded = true) userId: String,
+        @Header("Authorization") authorization: String
+    ): ApiResponse<ProfileData>
 
 }
 

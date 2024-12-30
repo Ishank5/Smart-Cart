@@ -7,6 +7,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.example.smart_cart.data.ViewModels.UserViewModel
+import com.example.smart_cart.data.repository.AuthRepository
+import com.example.smart_cart.data.repository.UserRepository
 import com.example.smart_cart.ui.home.HomeScreen
 import com.example.smart_cart.ui.login.LoginScreen
 import com.example.smart_cart.ui.login.LoginViewModel
@@ -14,12 +16,14 @@ import com.example.smart_cart.ui.profile.MainScreen
 import com.example.smart_cart.ui.signup.SignupScreen
 import com.example.smart_cart.ui.signup.RegisterViewModel
 import com.example.smart_cart.ui.splash.SplashScreen
+import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun AppNavGraph(
     navController: NavHostController = rememberNavController(),
     loginViewModel: LoginViewModel,
-    registerViewModel: RegisterViewModel
+    registerViewModel: RegisterViewModel,
+    userViewModel: UserViewModel
 ) {
     NavHost(
         navController = navController,
@@ -66,7 +70,8 @@ fun AppNavGraph(
                     navController.navigate("login") {
                         popUpTo("home") { inclusive = true }
                     }
-                }
+                },
+                userViewModel= userViewModel
             )
         }
 
@@ -75,7 +80,19 @@ fun AppNavGraph(
         composable("splash") {
             SplashScreen(
                 navController = navController,
-                context = LocalContext.current
+                context = LocalContext.current,
+                AuthRepository(firebaseAuth = FirebaseAuth.getInstance()),
+                userViewModel = userViewModel,
+                onTokenEmpty = {
+                    navController.navigate("home") {
+                        popUpTo("splash") { inclusive = true }
+                    }
+                },
+                onTokenPresent = {
+                    navController.navigate("profile") {
+                        popUpTo("splash") { inclusive = true }
+                    }
+                }
             )
         }
 

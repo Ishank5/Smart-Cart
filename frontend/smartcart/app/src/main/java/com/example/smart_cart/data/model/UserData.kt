@@ -9,3 +9,25 @@ data class UserData(
     val updatedAt: String,
     val createdAt: String
 )
+
+data class SmartBasket(
+    val id: Int,
+    val totalWeight: String
+)
+
+data class ProfileData(
+    val id: String,
+    val name: String,
+    val email: String,
+    val phone: String,
+    val fcmToken: String?,
+    val createdAt: String,
+    val updatedAt: String,
+    val smartBasket: SmartBasket?
+)
+
+data class ProfileResponse(
+    val profileData: ProfileData? = null,
+    val reason: String? = null,
+    val stack: String? = null
+)
