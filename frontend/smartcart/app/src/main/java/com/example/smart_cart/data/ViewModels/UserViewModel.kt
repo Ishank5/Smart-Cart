@@ -12,9 +12,11 @@ import kotlinx.coroutines.launch
 import android.util.Log
 import androidx.compose.ui.platform.LocalContext
 import com.example.smart_cart.data.api.ApiResponse
+import com.example.smart_cart.data.model.Category
 import com.example.smart_cart.data.model.ProfileData
-import com.example.smart_cart.data.model.ProfileResponse
+
 import com.example.smart_cart.data.repository.AuthRepository
+import com.example.smart_cart.data.repository.CategoryRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -44,12 +46,17 @@ class UserViewModel() : ViewModel() {
 
     suspend fun registerUser(user: RegistrationRequest, authRepository: AuthRepository) {
         val token = authRepository.getIdToken()
+        val fcmToken = authRepository.getFcmToken()
 
         // Log to check if the token is null or empty
         Log.d("UserViewModel", "ID Token: $token")
+        Log.d("UserViewModel", "FCM Token: $fcmToken")
+
+        // Update the user object with the fetched FCM token
+        val updatedUser = user.copy(fcmToken = fcmToken)
 
         // Check user details for debugging
-        Log.d("UserViewModel", "User details: ${user.toString()}")
+        Log.d("UserViewModel", "User details: ${updatedUser.toString()}")
 
         _userRegistrationState.postValue(UserRegistrationState.Loading) // Set loading state
 
@@ -61,7 +68,7 @@ class UserViewModel() : ViewModel() {
                 Log.d("UserViewModel", "Registering user with token: $token")
 
                 userRepository.registerUser(
-                    user = user,
+                    user = updatedUser,
                     authToken = token.toString(),
                 )
 
@@ -92,7 +99,6 @@ class UserViewModel() : ViewModel() {
             }
         }
     }
-
 
 
     suspend fun getUserDetails(authRepository: AuthRepository) {
@@ -138,4 +144,51 @@ class UserViewModel() : ViewModel() {
     // create a function here that stores the user details in state to be used elsewhere in the app
 
 
+}
+
+sealed class CategoryState {
+    object Loading : CategoryState()
+    data class Success(val response: ApiResponse<List<Category>>) : CategoryState()
+    data class Error(val message: String) : CategoryState()
+}
+
+class CategoryViewModel : ViewModel() {
+
+    private val categoryRepository = CategoryRepository()
+
+    private val _categoryState = MutableLiveData<CategoryState>()
+    val categoryState: LiveData<CategoryState> get() = _categoryState
+
+    private val _categories = MutableLiveData<List<Category>>()
+    val categories: LiveData<List<Category>> get() = _categories
+
+    fun fetchCategories() {
+        viewModelScope.launch {
+            try {
+                _categoryState.postValue(CategoryState.Loading)
+
+                // Fetch categories from the repository
+                categoryRepository.fetchCategories()
+
+                // Observe categoriesState and update the state based on the response
+                categoryRepository.categoriesState.collect { categoryResponse ->
+                    Log.d("CategoryViewModel", "Category Response: $categoryResponse")
+                    if (categoryResponse?.data != null) {
+                        // Update the categories in LiveData
+                        _categories.postValue(categoryResponse.data)
+
+                        _categoryState.postValue(CategoryState.Success(categoryResponse))
+                        Log.d("CategoryViewModel", "Fetched ${categoryResponse.data.size} categories successfully")
+                    } else {
+                        _categoryState.postValue(CategoryState.Error(categoryResponse?.reason ?: "Failed to fetch categories"))
+                        Log.e("CategoryViewModel", "Failed to fetch categories with reason: ${categoryResponse?.reason}")
+                    }
+                }
+
+            } catch (e: Exception) {
+                _categoryState.postValue(CategoryState.Error(e.message ?: "An unexpected error occurred"))
+                Log.e("CategoryViewModel", "An unexpected error occurred: ${e.message}")
+            }
+        }
+    }
 }

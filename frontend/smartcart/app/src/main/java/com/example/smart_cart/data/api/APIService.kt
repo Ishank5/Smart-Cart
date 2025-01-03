@@ -1,12 +1,11 @@
 package com.example.smart_cart.data.api
 
+import com.example.smart_cart.data.model.QrData
 import com.example.smart_cart.data.model.Category
-import com.example.smart_cart.data.model.LoginRequest
 import com.example.smart_cart.data.model.ProfileData
-import com.example.smart_cart.data.model.ProfileResponse
+
 import com.example.smart_cart.data.model.RegistrationRequest
 import com.example.smart_cart.data.model.UserData
-import kotlinx.coroutines.flow.Flow
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.Header
@@ -26,8 +25,11 @@ interface ApiService {
     ): ApiResponse<UserData>
 
     // Existing GET request for categories
+//    @GET("dashboard")
+//    suspend fun getCategories(): ApiResponse<List<Category>> // Returning a list of categories
     @GET("dashboard")
-    suspend fun getCategories(): ApiResponse<List<Category>> // Returning a list of categories
+    suspend fun getCategories(): ApiResponse<CategoryResponse>
+
 
     // New POST request for user registration
     @POST("user/register")
@@ -43,6 +45,16 @@ interface ApiService {
         @Header("Authorization") authorization: String
     ): ApiResponse<ProfileData>
 
+    @GET("product-variant/{productId}")
+    suspend fun getProductDetails(
+        @Path("productId",encoded = true) productId: String
+    ): ApiResponse<ProductDetails>
+
+    @POST("connection-request/")
+    suspend fun getQr(
+        @Header("Authorization") authorization: String
+    ): ApiResponse<QrData>
+
 }
 
 
@@ -54,32 +66,38 @@ data class ApiResponse<T>(
     val stack: String? = null    // Stack trace for errors (if any)
 )
 
-//data class Data(val categories: List<Category>, val carousels: List<Any>)
+data class CategoryResponse(
+    val categories: List<Category> // List of categories inside the `data` object
+)
 
-//// Repository
-//class CategoryRepository {
-//    private val apiService: ApiService
-//
-//    init {
-//        val retrofit = Retrofit.Builder()
-//            .baseUrl("https://backend-153569340026.us-central1.run.app/api/")
-//            .addConverterFactory(GsonConverterFactory.create())
-//            .build()
-//
-//        apiService = retrofit.create(ApiService::class.java)
-//    }
-//
-//    private val _categories = MutableStateFlow<List<Category>>(emptyList())
-//    val categories: StateFlow<List<Category>> = _categories
-//
-////    suspend fun fetchCategories() {
-////        withContext(Dispatchers.IO) {
-////            try {
-////                val response = apiService.getCategories()
-////                _categories.value = response.data.categories
-////            } catch (e: Exception) {
-////                e.printStackTrace() // Handle error (e.g., log it)
-////            }
-////        }
-////    }
-//}
+
+
+data class ProductDetailsResponse(
+    val data: ProductDetails? // Nullable
+)
+
+data class ProductDetails(
+    val barcode: String,
+    val color: String?,
+    val size: String?,
+    val weight: String,
+    val price: String,
+    val stock: Int,
+    val createdAt : String,
+    val updatedAt : String,
+    val productId: Int,
+    val product: Product // Nullable
+)
+
+data class Product(
+    val id: Int,
+    val name: String,
+    val description: String?,
+    val manufacturer: String,
+    val image: String?,
+    val createdAt: String,
+    val updatedAt: String,
+    val categoryId: Int
+)
+// Repository
+

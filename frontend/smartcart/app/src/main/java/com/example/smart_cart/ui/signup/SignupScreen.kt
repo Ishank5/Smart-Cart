@@ -169,13 +169,13 @@ fun SignupScreen(
                     auth.currentUser?.getIdToken(true)?.addOnCompleteListener { task ->
                         if (task.isSuccessful) {
 
-                            val authToken: String? = "fcmtoken"
+                            val fcmToken: String? = "fcmtoken"
 
                             // Proceed with the registration API call after Firebase auth success
                             val registrationRequest = RegistrationRequest(
                                 name = name,
                                 phone = phone.toString(),
-                                fcmToken = authToken // Pass the FCM token here
+                                fcmToken = fcmToken // Pass the FCM token here
                             )
 
                             // Launch a coroutine to call registerUser

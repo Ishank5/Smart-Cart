@@ -26,8 +26,3 @@ data class ProfileData(
     val smartBasket: SmartBasket?
 )
 
-data class ProfileResponse(
-    val profileData: ProfileData? = null,
-    val reason: String? = null,
-    val stack: String? = null
-)

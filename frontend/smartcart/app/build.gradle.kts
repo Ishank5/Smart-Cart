@@ -6,7 +6,7 @@ plugins {
 
 android {
     namespace = "com.example.smart_cart"
-    compileSdk = 34
+    compileSdk = 35;
 
     defaultConfig {
         applicationId = "com.example.smart_cart"
@@ -88,7 +88,7 @@ dependencies {
 
     // Debug dependencies
     debugImplementation(libs.androidx.ui.tooling)
-    debugImplementation(libs.androidx.ui.test.manifest)
+    debugImplementation(libs.androidx.ui.test.manifest);
 
     // Jetpack Compose & Kotlin dependencies
     implementation("androidx.compose.ui:ui:1.4.0")
@@ -99,4 +99,13 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.6")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
+
+    implementation ("com.google.zxing:core:3.5.2")
+
+    implementation ("com.google.firebase:firebase-messaging-ktx")
+    implementation("io.coil-kt:coil-compose:2.4.0")
+
+    implementation ("com.google.firebase:firebase-database-ktx")
+
+
 }

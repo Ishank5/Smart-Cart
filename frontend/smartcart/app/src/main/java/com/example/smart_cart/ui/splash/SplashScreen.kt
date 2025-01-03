@@ -68,31 +68,20 @@ fun SplashScreen(
     }
 
     Box(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        Color(0xFF2382AA),
-                        Color(0xFF64B5F6)
-                    )
-                )
-            ),
+        modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
+        Image(
+            painter = painterResource(id = R.drawable.splash),
+            contentDescription = "Splash Background",
+            modifier = Modifier.fillMaxSize(),
+            contentScale = ContentScale.Crop
+        )
+
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             modifier = Modifier.padding(16.dp)
         ) {
-            Image(
-                painter = painterResource(id = R.drawable.bg_image),
-                contentDescription = "Splash Illustration",
-                modifier = Modifier
-                    .size(250.dp)
-                    .padding(bottom = 32.dp),
-                contentScale = ContentScale.Fit
-            )
-
             Text(
                 text = "Smart Cart App",
                 fontSize = 36.sp,
@@ -117,6 +106,7 @@ fun SplashScreen(
                 )
             }
         }
+
         when (getUserState) {
             is GetUserState.Loading -> androidx.compose.material3.CircularProgressIndicator(
                 Modifier.align(Alignment.Center)

@@ -3,6 +3,7 @@ package com.example.smart_cart.ui.profile
 import android.util.Log
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -59,16 +60,38 @@ import androidx.compose.material.IconButton
 import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Surface
 import androidx.compose.material.TextButton
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.livedata.observeAsState
+import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.smart_cart.SmartBasketViewModel
 import com.example.smart_cart.data.ViewModels.GetUserState
+import com.example.smart_cart.data.ViewModels.QrState
+import com.example.smart_cart.data.ViewModels.QrViewModel
 import com.example.smart_cart.data.ViewModels.UserViewModel
 import com.example.smart_cart.data.model.SmartBasket
+import com.example.smart_cart.data.ViewModels.CategoryState
+import com.example.smart_cart.data.ViewModels.CategoryViewModel
+import coil.compose.rememberAsyncImagePainter
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.net.URL
+import android.graphics.BitmapFactory
+import com.example.smart_cart.data.ViewModels.ItemsViewModel
 
 
 @Composable
-fun MainScreen(onLogoutClick: () -> Unit,userViewModel: UserViewModel) {
+fun MainScreen(onLogoutClick: () -> Unit,
+               userViewModel: UserViewModel,
+               onScanQrClick: () -> Unit,
+               smartBasketViewModel: SmartBasketViewModel,
+               categoryViewModel: CategoryViewModel,
+               onCartClick: () -> Unit,
+               itemsViewModel: ItemsViewModel
+               ) {
 
 
 
@@ -85,7 +108,7 @@ fun MainScreen(onLogoutClick: () -> Unit,userViewModel: UserViewModel) {
                 )
             }
         },
-        bottomBar = { BottomNavigationBar() }
+        bottomBar = { BottomNavigationBar(onCartClick) }
     ) { paddingValues ->
         Box(
             modifier = Modifier
@@ -93,7 +116,7 @@ fun MainScreen(onLogoutClick: () -> Unit,userViewModel: UserViewModel) {
                 .padding(paddingValues)
         ) {
             Image(
-                painter = painterResource(R.drawable.bg_image),
+                painter = painterResource(R.drawable.login2),
                 contentDescription = "Background",
                 modifier = Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop
@@ -107,8 +130,8 @@ fun MainScreen(onLogoutClick: () -> Unit,userViewModel: UserViewModel) {
                 SearchBar(modifier = Modifier.padding(top = 32.dp, start = 12.dp, end = 12.dp,bottom=12.dp))
 
                 UpdatesSection()
-                CartConnectionStatus(userViewModel)
-                CategoriesSection(modifier = Modifier.padding(top=12.dp,bottom = 12.dp))
+                CartConnectionStatus(itemsViewModel = itemsViewModel,smartBasketViewModel=smartBasketViewModel,userViewModel=userViewModel, qrViewModel = QrViewModel(), onScanQrClick = { onScanQrClick() })
+                CategoriesSection(modifier = Modifier.padding(top=12.dp,bottom = 12.dp),categoryViewModel = categoryViewModel)
                 Divider(
                     color = Color(0xdddddddd),
                     thickness = 1.dp,
@@ -169,9 +192,9 @@ fun Heading(modifier: Modifier = Modifier) {
 @Composable
 fun UpdatesSection() {
     val images = listOf(
-        R.drawable.ic_launcher_foreground, // Add more image resources to the list
-        R.drawable.ic_launcher_foreground,
-        R.drawable.ic_launcher_foreground
+        R.drawable.frame, // Add more image resources to the list
+        R.drawable.frame,
+        R.drawable.frame
         // Add more images here as needed
     )
 
@@ -201,35 +224,24 @@ fun UpdatesSection() {
 
 
 
-//            Column(
-//                modifier = Modifier
-//
-//                    .padding(16.dp)
-//            ) {
-//                Text(
-//                    text = "Updates",
-//                    color = Color.White,
-//                    fontSize = 18.sp,
-//                    fontWeight = FontWeight.Bold
-//                )
-//                Text(
-//                    text = "All Vegetables & Fruits",
-//                    color = Color.White,
-//                    fontSize = 14.sp
-//                )
-//                Spacer(modifier = Modifier.height(8.dp))
-//                Button(onClick = { /* TODO */ }) {
-//                    Text(text = "See Detail")
-//                }
-//            }
 
 
 @Composable
-fun CartConnectionStatus(userViewModel: UserViewModel) {
+fun CartConnectionStatus(
+    userViewModel: UserViewModel,
+    qrViewModel: QrViewModel,
+    smartBasketViewModel: SmartBasketViewModel,
+    onScanQrClick: () -> Unit,
+    itemsViewModel: ItemsViewModel
+) {
     // Mutable state variables to track cart connection and user details
     val userState by userViewModel.getUserState.observeAsState()
     var smartBasket by remember { mutableStateOf<SmartBasket?>(null) }
     var email by remember { mutableStateOf("") }
+    var BasketId by remember { mutableStateOf(0) }
+
+    // Observe smartBasketId from SmartBasketViewModel
+    val smartBasketId by smartBasketViewModel.smartBasketId.observeAsState()
 
     userState?.let { state ->
         when (state) {
@@ -238,6 +250,9 @@ fun CartConnectionStatus(userViewModel: UserViewModel) {
                 profileData?.let {
                     smartBasket = it.smartBasket
                     email = it.email
+                    smartBasket?.let { basket ->
+                        BasketId = basket.id
+                    }
                 }
             }
             is GetUserState.Error -> {
@@ -247,10 +262,48 @@ fun CartConnectionStatus(userViewModel: UserViewModel) {
         }
     }
 
+    // Update smartBasket when smartBasketId is received from FCM
+    smartBasketId?.let {
+        smartBasket = SmartBasket(it.toInt(), "")
+        BasketId = smartBasket?.id!!
+    }
+
     Log.d("CartConnectionStatus", "Email: $email")
     Log.d("CartConnectionStatus", "Smart Basket: $smartBasket")
 
     val isCartConnected = smartBasket != null
+
+    // Remember whether observeItems has been triggered
+    var observeItemsCalled by remember { mutableStateOf(false) }
+
+    if (isCartConnected && !observeItemsCalled) {
+        LaunchedEffect(isCartConnected) {
+            Log.d("CartConnectionStatus", "Observe items called ")
+            itemsViewModel.observeItems(BasketId)
+            observeItemsCalled = true // Ensure it's only called once
+        }
+    }
+
+    if (!isCartConnected) {
+        val qrState by qrViewModel.qrState.observeAsState()
+        var id by remember { mutableStateOf("") }
+
+        qrState?.let { state ->
+            when (state) {
+                is QrState.Success -> {
+                    val qrData = state.response.data
+                    qrData?.let {
+                        id = qrData.id
+                        Log.d("CartConnectionStatus", "QR ID: $id")
+                    }
+                }
+                is QrState.Error -> {
+                    // Handle error state
+                }
+                else -> { /* Handle other states if needed */ }
+            }
+        }
+    }
 
     // Box container to align content at the center
     Box(
@@ -295,7 +348,11 @@ fun CartConnectionStatus(userViewModel: UserViewModel) {
                 } else {
                     // Text and icon for "scan QR" state
                     Column(
-                        horizontalAlignment = Alignment.CenterHorizontally
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.clickable {
+                            Log.d("CartConnectionStatus", "Scan QR button clicked")
+                            onScanQrClick()
+                        }
                     ) {
                         Text(
                             text = "Scan QR to connect your cart",
@@ -317,67 +374,114 @@ fun CartConnectionStatus(userViewModel: UserViewModel) {
 
 
 
+
+
+
+
 @Composable
 fun CategoriesSection(
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    categoryViewModel: CategoryViewModel
 ) {
-//    // Initialize the repository (assuming you have a way to get it, e.g., via a singleton or DI)
-//    val repository = CategoryRepository() // Use your actual repository creation logic here
-//
-//    // Initialize ViewModel with ViewModelFactory
-//    val viewModel: CategoryViewModel = viewModel(
-//        factory = CategoryViewModelFactory(repository)
-//    )
-//
-//    // Observe categories
-//    val categories by viewModel.categories.collectAsState()
-//
-//    Column(
-//        modifier = modifier.fillMaxWidth()
-//    ) {
-//        Text(
-//            text = "Categories",
-//            color = Color.Black,
-//            fontSize = 18.sp,
-//            fontWeight = FontWeight.Bold
-//        )
-//        Spacer(modifier = Modifier.height(8.dp))
-//        LazyRow(
-//            horizontalArrangement = Arrangement.spacedBy(8.dp),
-//            modifier = Modifier.fillMaxWidth()
-//        ) {
-//            items(categories) { category ->
-//                CategoryItem(
-//                    name = category.name,
-//                    icon = painterResource(R.drawable.ic_launcher_foreground) // Replace with actual icon logic
-//                )
-//            }
-//        }
-//    }
+
+    val categoriesState by categoryViewModel.categoryState.observeAsState()
+
+    Column(
+        modifier = modifier.fillMaxWidth()
+    ) {
+        Text(
+            text = "Categories",
+            color = Color.Black,
+            fontSize = 18.sp
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+
+        when (categoriesState) {
+            is CategoryState.Loading -> {
+                Text(text = "Loading categories...", color = Color.Gray)
+            }
+            is CategoryState.Success -> {
+                val categories = (categoriesState as CategoryState.Success).response.data ?: emptyList()
+                Log.d("CategoriesSection", "Fetched categories: $categories")
+                LazyRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    items(categories) { category ->
+                        Log.d("CategoryItem", "Loading category: ${category.name}, image: ${category.image}")
+                        CategoryItem(
+                            name = category.name,
+                            iconUrl = category.image
+                        )
+                    }
+                }
+            }
+            is CategoryState.Error -> {
+                val errorMessage = (categoriesState as CategoryState.Error).message
+                Log.e("CategoriesSection", "Error loading categories: $errorMessage")
+                Text(text = "Error: $errorMessage", color = Color.Red)
+            }
+            else -> {
+                Log.d("CategoriesSection", "No data available")
+                Text(text = "No data available", color = Color.Gray)
+            }
+        }
+    }
 }
 
 
+
 @Composable
-fun CategoryItem(name: String, icon: Painter) {
+fun CategoryItem(
+    name: String,
+    iconUrl: String?,
+    modifier: Modifier = Modifier
+) {
+    var bitmap by remember { mutableStateOf<ImageBitmap?>(null) }
+
+    LaunchedEffect(iconUrl) {
+        bitmap = loadImageFromUrl(iconUrl)
+    }
+
     Column(
-        modifier = Modifier.padding(8.dp).height(90.dp).width(100.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
+        modifier = modifier.padding(8.dp),
+        verticalArrangement = Arrangement.Center
     ) {
-        Image(
-            painter = icon,
-            contentDescription = name,
-            modifier = Modifier.size(65.dp)
-        )
+        if (bitmap != null) {
+            Image(
+                bitmap = bitmap!!,
+                contentDescription = name,
+                modifier = Modifier.size(64.dp)
+            )
+        } else {
+            Image(
+                painter = painterResource(R.drawable.ic_launcher_foreground),
+                contentDescription = "Fallback",
+                modifier = Modifier.size(64.dp)
+            )
+        }
         Spacer(modifier = Modifier.height(4.dp))
         Text(
             text = name,
             color = Color.Black,
-            fontSize = 16.sp,
-            textAlign = TextAlign.Center,
-            maxLines = 1
+            fontSize = 14.sp
         )
     }
 }
+
+suspend fun loadImageFromUrl(url: String?): ImageBitmap? {
+    return try {
+        withContext(Dispatchers.IO) {
+            val inputStream = URL(url).openStream()
+            val bitmap = BitmapFactory.decodeStream(inputStream)
+            bitmap.asImageBitmap()
+        }
+    } catch (e: Exception) {
+        null
+    }
+}
+
+
 
 
 // Data class for grocery items
@@ -385,9 +489,9 @@ data class GroceryItemData(val name: String, val category: String, val price: St
 
 // Sample list of grocery items
 val groceryItems = listOf(
-    GroceryItemData(name = "Tomato", category = "Vegetable", price = "100 Rs/kg", image = R.drawable.ic_launcher_foreground),
-    GroceryItemData(name = "Carrot", category = "Vegetable", price = "50 Rs/kg", image = R.drawable.ic_launcher_foreground),
-    GroceryItemData(name = "Apple", category = "Fruit", price = "150 Rs/kg", image = R.drawable.ic_launcher_foreground)
+    GroceryItemData(name = "Tomato", category = "Vegetable", price = "100 Rs/kg", image = R.drawable.tomato),
+    GroceryItemData(name = "Carrot", category = "Vegetable", price = "50 Rs/kg", image = R.drawable.carrot),
+    GroceryItemData(name = "Apple", category = "Fruit", price = "150 Rs/kg", image = R.drawable.tomato)
     // Add more items as needed
 )
 
@@ -496,7 +600,7 @@ fun GroceryItem(groceryItemData: GroceryItemData) {
 
 
 @Composable
-fun BottomNavigationBar() {
+fun BottomNavigationBar(onCartClick:() -> Unit) {
     BottomNavigation(
         backgroundColor = Color.White,
         contentColor = Color.Gray
@@ -511,19 +615,19 @@ fun BottomNavigationBar() {
             icon = { Icon(imageVector = Icons.Default.Favorite, contentDescription = "Favorites", tint = Color(0xFF2382AA), modifier = Modifier.size(32.dp)) },
             //label = { Text("Favorites") },
             selected = false,
-            onClick = { /* TODO */ }
+            onClick = { onCartClick }
         )
         BottomNavigationItem(
             icon = { Icon(imageVector = Icons.Default.ShoppingCart, contentDescription = "Cart", tint = Color(0xFF2382AA), modifier = Modifier.size(32.dp)) },
             //label = { Text("Cart") },
             selected = false,
-            onClick = { /* TODO */ }
+            onClick = {onCartClick() }
         )
         BottomNavigationItem(
             icon = { Icon(imageVector = Icons.Default.AccountCircle, contentDescription = "Account", tint = Color(0xFF2382AA), modifier = Modifier.size(32.dp)) },
             //label = { Text("Account") },
             selected = false,
-            onClick = { /* TODO */ }
+            onClick = { onCartClick }
         )
     }
 }

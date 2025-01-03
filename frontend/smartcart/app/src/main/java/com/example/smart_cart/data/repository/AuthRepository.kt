@@ -1,9 +1,11 @@
 package com.example.smart_cart.data.repository
 
 
+import android.util.Log
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.messaging.FirebaseMessaging
 import kotlinx.coroutines.tasks.await
 
 class AuthRepository(
@@ -55,6 +57,17 @@ class AuthRepository(
             null
         }
     }
+    suspend fun getFcmToken(): String? {
+        return try {
+            val token = FirebaseMessaging.getInstance().token.await()
+            Log.d("FCM", "FCM Token: $token")
+            token
+        } catch (e: Exception) {
+            Log.w("FCM", "Fetching FCM token failed", e)
+            null
+        }
+    }
+
 
     fun getCurrentUserId(): String? {
         val firebaseAuth = FirebaseAuth.getInstance()

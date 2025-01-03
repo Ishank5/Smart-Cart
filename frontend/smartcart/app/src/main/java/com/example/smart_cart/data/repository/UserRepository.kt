@@ -8,7 +8,7 @@ import com.example.smart_cart.data.api.ApiService
 import com.example.smart_cart.data.api.ApiResponse
 import com.example.smart_cart.data.model.LoginRequest
 import com.example.smart_cart.data.model.ProfileData
-import com.example.smart_cart.data.model.ProfileResponse
+
 import com.example.smart_cart.data.model.RegistrationData
 import com.example.smart_cart.data.model.RegistrationRequest
 import com.example.smart_cart.data.model.RegistrationResponse
@@ -81,14 +81,14 @@ class UserRepository {
         )
     }
 
-    private fun mapProfileDataToProfileResponse(profileData: ProfileData): ProfileResponse {
-        Log.d("UserRepository", "Mapping ProfileData to ProfileResponse: $profileData")
-        return ProfileResponse(
-            profileData = profileData,
-            reason = null,
-            stack = null
-        )
-    }
+//    private fun mapProfileDataToProfileResponse(profileData: ProfileData): ProfileResponse {
+//        Log.d("UserRepository", "Mapping ProfileData to ProfileResponse: $profileData")
+//        return ProfileResponse(
+//            profileData = profileData,
+//            reason = null,
+//            stack = null
+//        )
+//    }
 
 
     suspend fun registerUser(user: RegistrationRequest, authToken: String) {
